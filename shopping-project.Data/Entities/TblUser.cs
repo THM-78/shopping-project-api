@@ -22,11 +22,6 @@ public partial class TblUser
 
     public int RoleId { get; set; }
 
-    public string? ShippingAddress { get; set; }
-
-    [StringLength(10)]
-    public string? PostalCode { get; set; }
-
     [ForeignKey("RoleId")]
     [InverseProperty("TblUsers")]
     public virtual TblRole Role { get; set; } = null!;
