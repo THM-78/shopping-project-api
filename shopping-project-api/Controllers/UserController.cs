@@ -1,10 +1,9 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using shopping_project.Data.Entities;
-using shopping_project_api.Data.Models.ViewModels;
+using shopping_project.Data.Entities.ViewModels;
 using shopping_project_api.services;
 using System.ComponentModel;
 using System.Data;
@@ -18,21 +17,23 @@ namespace shopping_project_api.Controllers
     public class UserController : ControllerBase
     {
         private readonly ShoppingContext _context;
-        private readonly IMapper AutoMapper;
-        public UserController(IMapper mapper)
+        public UserController()
         {
             _context = new ShoppingContext();
-            AutoMapper = mapper;
         }
 
         [HttpGet("GetAll/{pageNo}")]
         public async Task<IActionResult> GetAll(int pageNo)
         {
-            var users = await _context.TblUsers.Skip(pageNo -1 *100).Take(100).ToListAsync();
-            if(users.Count > 0)
-                return Ok(users);
+            if(pageNo > 0)
+            {
+                var users = await _context.TblUsers.Skip((pageNo -1) *100).Take(100).ToListAsync();
+                if(users.Count > 0)
+                    return Ok(users);
 
-            return NoContent();
+                return NoContent();
+            }
+            return BadRequest();
         }
 
         [HttpGet("GetUser/{id}")]
@@ -46,7 +47,7 @@ namespace shopping_project_api.Controllers
             return Ok(user);
         }
         [HttpPost("AddUser")]
-        public async Task<IActionResult> Add(TblUser user)
+        public async Task<IActionResult> Add(User user)
         {
             if(user is null && _context.TblUsers.Any(i => i.Tell == user.Tell))
             {
@@ -56,7 +57,14 @@ namespace shopping_project_api.Controllers
             {
                 try
                 {
-                    await _context.TblUsers.AddAsync(user);
+                    TblUser userToAdd = new TblUser()
+                    {
+                        Tell = user.Tell,
+                        IsVerified = user.isVerified,
+                        RoleId = user.RoleId,
+                    };
+
+                    await _context.TblUsers.AddAsync(userToAdd);
                     await _context.SaveChangesAsync();
                     return Ok("User Added Successfully");
                 }
@@ -68,16 +76,17 @@ namespace shopping_project_api.Controllers
         }
 
         [HttpPost("EditUser")]
-        public async Task<IActionResult> Edit(TblUser user)
+        public async Task<IActionResult> Edit(User user)
         {
             var selectedUser = await _context.TblUsers.SingleOrDefaultAsync(i => i.Id == user.Id);
             if (selectedUser is null)
                 return BadRequest("user not founded");
 
-            AutoMapper.Map(user, selectedUser);
+            selectedUser.Tell = user.Tell;
+            selectedUser.IsVerified = user.isVerified;
+            selectedUser.RoleId = user.RoleId;
             try
             {
-                // ذخیره تغییرات با استفاده از قفل خوش‌بینانه
                 _context.Entry(selectedUser).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
                 return Ok();
